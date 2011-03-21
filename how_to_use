@@ -1,0 +1,65 @@
+ALIGATOR2
+
+ALIGATOR2 is a C++ implementation of ALIGATOR, with the target of faster running speed and easier to use. 
+
+Instruction for using ALIGATOR2
+
+A. Compile ALIGATOR2
+
+1. Unzip the source file code.
+2. Under the unzipped directory, compile the source code by typing
+   make clean
+   make
+
+B. Use ALIGATOR2
+   ALIGATOR2 has several parameters can be specified by commandline or a configuration file.
+   Allowed parameters are: :
+   --help                                                         Produce help message
+   --snps_file arg                                                The snp file with pvalue 
+   --gene_file arg                                                The snp file with corresponding genes 
+   --pathway_file arg                                             The gene file with corresponding pathways 
+   --output_file arg (=output1.txt)                               The output file 
+   --significant_pvalue arg (=0.0019760699999999999)              The SNP will be counted as a significant SNP if it is <=significant_pvalue
+   --permutation_number arg (=10000)                              The number of permutations needed to get categorical pvalue
+   --simulate_permutation_number arg (=1000)                      The number of simulations for multiple tests correction
+   --config arg                                                   Configuration file
+   --log_file  arg                                                The log file ( if not set, no log file will be output)
+   --significant_gene_fraction arg                                If this is set, the program will use the following precedure to determine the significant_pvalue instead of input from the user:
+                                                                  - map all SNPs to genes
+                                                                  - for each gene, take the SNP with the lowest pvalue
+                                                                  - identify the gene that is at the 100*arg percentile (so --significant_gene_fraction 0.05 means 5th percentile)
+                                                                  - the pvalue of this gene becomes the --significant_pvalue
+
+                                                                  
+  --min_genes arg (=0)                              - The minimum number of genes
+                                                    - in each pathway (excluded)
+  --max_genes arg (=1000000)                        - The maximum number of genes
+                                                    - in each pathway (excluded)
+  --max_correlation arg (=1)                        - The maximum correlation, all pathways have higher correlation than specified will select the one with 
+                                                    highest p-value
+  --ld_threshold arg                                - The minimum gene distance 
+                                                    in a pathway
+
+                                                                  
+   You can also put all these parameters into a configuration file which specified by --config. Under the source code directory, config.cfg is an example of configuration file. You can also use both commandline and configuration file. And the parameters in command line have a higher priority, which means ALIGATOR2 accepts arguments from commandline if both commandline and configuration file specify the same parameters.
+
+   Here is an example for running ALIGATOR2:
+   ./aligator_exe --config config.cfg --permutation_number 100
+
+   The format of datafile:
+   ALIGATOR2 accepts any character as the ID of pathway, gene or SNP, EXCEPT space.
+   snps_file: each line contains SNP ID followed by the pvalue of this SNP.
+   gene_file: each line contains SNP ID followed by the number of genes associated with this SNP, then followed by the gene ID list.
+   pathway_file: each line contains gene ID followed by associated pathway ID. (Several lines may have the same gene ID, indicating this gene is associating with several pathways. And several lines may also have same pathway ID)
+
+C. Result
+   Result file is specified by the output_file parameter. And the format is:
+   Column 1: The ID of the pathway
+   Column 2: The number of significant genes in the pathway (i.e. genes with at least one SNP whose p-value for association is less than the criterion specified by users)
+   Column 3: The total number of genes in the pathway (that is, genes containing at least one SNP analysed in the study).
+   Column 4: The expected number of significant genes in the category.
+   Column 5: The category-specific p-value for over-representation (i.e. the proportion of simulated gene lists containing at least as many genes from that category as were present in the original data).
+   Column 6: The expected number of categories per study with p-values at least as significant as that observed,  in the absence of any true over-representation of any GO category.
+   Column 7: “Study-wide” p-value for over-representation (i.e. the probability that at least one category would give a category-specific p-value at least as significant as that observed, in the absence of any true over-representation of any GO category)
+
+   The number of categories achieving a particular category-specific p-value for over-representation (p<0.05, p<0.01, p<0.001) are given, together with a p-value for a test of whether these numbers are greater than expected by chance (denoted “significant”). 
