@@ -37,7 +37,7 @@ B. Use ALIGATOR2
                                                     - in each pathway (excluded)
   --max_correlation arg (=1)                        - The maximum correlation, all pathways have higher correlation than specified will select the one with 
                                                     highest p-value
-  --ld_threshold arg                                - The minimum gene distance 
+  --ld_threshold arg                                - The minimum gene distance (the unit is Mbps, not bps)
                                                     in a pathway
 
                                                                   
