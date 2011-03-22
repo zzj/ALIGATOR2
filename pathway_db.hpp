@@ -53,7 +53,7 @@ class pathway_db{
      vector<int> total_num_gene_pathway;
      int permutation_number;
      int simulate_permutation_number;
-	 int ld_threshold_;
+	 double ld_threshold_;
 	 vector<int> snp_contributed_pathway_;
 
 public:

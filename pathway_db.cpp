@@ -62,8 +62,8 @@ pathway_db::pathway_db(int argc, char * argv[]){
           ("max_correlation", po::value<double>(&max_correlation_)->default_value(1),
            "The maximum correlation")
           
-		  ("ld_threshold", po::value<int>(&ld_threshold_),
-		   "The minimum gene distance in a pathway")
+		  ("ld_threshold", po::value<double>(&ld_threshold_),
+		   "The minimum gene distance in a pathway, the unit is Mbps, not bps.")
 		  
 		  ("pathway_file", po::value<string>(&pfile),
 		   "The gene file with corresponding pathways. ")
@@ -106,6 +106,7 @@ pathway_db::pathway_db(int argc, char * argv[]){
 		  cout << desc << "\n";
 		  exit(0);
      }
+     ld_threshold_=ld_threshold_*1000000;
      if (vm.count("gene_file")<1||vm.count("snps_file")<1 || vm.count("pathway_file")<1){
 	  
 		  cout << "gene_file or snps_file or pathway_file is not specified\n";
@@ -181,7 +182,7 @@ pathway_db::pathway_db(int argc, char * argv[]){
      printf("There are %d genes in the gene file.\n", (int)gene_name2id_.size());
      printf("There are %d SNPs in the gene file.\n",(int)snp_list.size());
 
-	 printf("Loading gene information ...");
+	 printf("Loading gene information %s...", ginfofile.c_str());
 
 
 	 FILE* fginfo=open_file((char *)ginfofile.c_str(),"r");
@@ -191,13 +192,18 @@ pathway_db::pathway_db(int argc, char * argv[]){
 	 }
 	 geneinfo_.resize(gene_name2id_.size());
 	 
-	 while(fscanf(fd,"%d%d%d%s",&chrid,&genestart,&geneend,genename)==4){
+	 while(fscanf(fginfo,"%d%d%d%s",&chrid,&genestart,&geneend,genename)==4){
 		  map<string,int>::iterator ret=gene_name2id_.find(genename);
 		  if(ret!=gene_name2id_.end()){
 			   geneinfo_[ret->second]=gene_info(chrid,genestart,geneend);
 		  }
 	 }
 
+
+     for (int i=0;i<geneinfo_.size();i++){
+//          printf("%d\t%d\t%d\n", geneinfo_[i].chr_id, geneinfo_[i].start, geneinfo_[i].end);
+          ;
+     }
 	 printf("Buiding snp index ...\n");
      
      for (i=0;
@@ -711,14 +717,16 @@ int pathway_db::count_significant_genes_by_ld(vector<int> *sgene){
 			   if (currpos-lastpos>ld_threshold_){
 					ret++;
 					lastpos=currpos;
-			   }
-			   /* else keep last position info */
+			   }else {
+                    /* else keep last position info */
+               }
 		  }
 	 }
 	 return ret;
 }
 
 int pathway_db::foreach_count_significant_genes_by_ld(vector<int> * num_gene_pathway, vector<vector<int> > *gene_list_pathway){
+
 
 	 if (num_gene_pathway->size()!=gene_list_pathway->size()){
           fprintf(stderr, "ERROR: size does not match at %s:%d\n",
