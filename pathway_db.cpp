@@ -745,7 +745,6 @@ int pathway_db::calc_correlation_pathway(){
      int pathway_size=(int)pathway2genes_.size();
      pathway_correlation_.resize(pathway_size);
      int i,j;
-     double min=0;
      int joint, total;
      vector<int>::iterator it;
      for (i=0;i<pathway_size;i++){
@@ -765,9 +764,6 @@ int pathway_db::calc_correlation_pathway(){
                else {
 //                    printf("here\n");
                     pathway_correlation_[i][j]=double(joint)/double(total);
-                    if (min<pathway_correlation_[i][j]) {
-                         min=pathway_correlation_[i][j];
-                    }
                }
                //if (pathway_correlation_[i][j]>0) printf("%d\n%d\n%lf\n", i,j,pathway_correlation_[i][j]);
           }
@@ -794,13 +790,11 @@ int pathway_db::remove_correlated_pathway( vector<double> &catepvalue){
                if (catepvalue[j]==1) continue;
                int iid=pvalues_idx[i].second;
                int jid=pvalues_idx[j].second;
-               
                if (pathway_correlation_[iid][jid]>max_correlation_){
-                    catepvalue[j]=10;
+                    catepvalue[jid]=10;
                }
           }
      }
-
 	 return 0;
 
 }
