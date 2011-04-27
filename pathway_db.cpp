@@ -432,6 +432,10 @@ int pathway_db::study(){
      // use the sim_matrix to get category specific pvalue. 
      permutation_study(&sim_matrix, N, &num_gene_pathway, &catepvalue_pathway);
      calc_correlation_pathway();
+
+     for (i=0;i<catepvalue_pathway.size();i++){
+          if (num_gene_pathway[i]<2) catepvalue_pathway[i]=1;
+     }
      remove_correlated_pathway( catepvalue_pathway);
      
      // randomly select one replicate gene list as "observe data"
@@ -447,25 +451,36 @@ int pathway_db::study(){
      double p2=0.01;
      double p3=0.001;
      vector<int> v1, v2, v3;
+     v1.resize(simulate_permutation_number);
+     v2.resize(simulate_permutation_number);
+     v3.resize(simulate_permutation_number);
+     overall_pvalues.resize(simulate_permutation_number);
+     pvalue_tables.resize(simulate_permutation_number*pathway_names_.size());
+     int sample_id,n1,n2,n3;
+     vector<double> temppvalue_pathway;
+     double min;
+     vector<int> rsamples;
+     rsamples.resize(simulate_permutation_number*permutation_number+simulate_permutation_number);
+     // prepare random sample first, because random generator is not thread safe. 
+     for (i=0;i<rsamples.size();i++){
+          rsamples[i]=generate_sample_id();
+     }
+
+#pragma omp parallel for default (shared) private(i,sim_gene,sample_id,temppvalue_pathway,k,j \
+     ,min,n1,n2,n3)
      for (i=0;i<simulate_permutation_number;i++){
-		  vector<int> sim_gene;
-	  
 		  // randomly select a gene list
-		  int sample_id=generate_sample_id();
-		  vector<int> random_snp=random_snp_list[sample_id];
-		  vector<double> temppvalue_pathway;
-		  sim_gene.resize(N);
-		  temppvalue_pathway.resize(pathway_names_.size());
-		  int k;
+		  sample_id=rsamples[i];
+          sim_gene.clear();		  sim_gene.resize(N);
+		  temppvalue_pathway.clear();		  temppvalue_pathway.resize(pathway_names_.size());
 		  sim_num_gene_pathway=sim_matrix.at(sample_id);
 
 		  // use the other gene list to get significant gene value. 
 		  for (j=0;j<permutation_number;j++){
-			   int k;
 
 			   //if (j==sample_id) continue;
-			   int p=generate_sample_id();
-			   if (p==sample_id){j--; continue;}
+			   int p=rsamples[simulate_permutation_number+permutation_number*i+j];
+			   //if (p==sample_id){j--; continue;}
 			   vector<int> temp_sim_num_gene_pathway;
 
 			   vector<int> temp;
@@ -475,8 +490,9 @@ int pathway_db::study(){
 						 temppvalue_pathway.at(t)+=double(1)/double(permutation_number);
 			   }
 		  }
-		  double min=100;;
-		  int n1=0, n2=0, n3=0;
+          min=100;;
+		  n1=0, n2=0, n3=0;
+          remove_correlated_pathway(temppvalue_pathway);
 		  for (j=0;j<temppvalue_pathway.size();j++){
 			   // ignore the pathway has one or zero significant pvalue.
 			   if (sim_num_gene_pathway[j]<2) temppvalue_pathway[j]=1;
@@ -493,13 +509,18 @@ int pathway_db::study(){
 					min=temppvalue_pathway[j];
 			   }
 		  }
-		  v1.push_back(n1);v2.push_back(n2);v3.push_back(n3);
-          remove_correlated_pathway(temppvalue_pathway);
-		  // get the minimal pvalue from this simulation. 
-		  overall_pvalues.push_back(min);
-		  pvalue_tables.insert(pvalue_tables.end(), temppvalue_pathway.begin(), temppvalue_pathway.end());
+		  //v1.push_back(n1);v2.push_back(n2);v3.push_back(n3);
+          v1[i]=n1;
+          v2[i]=n2;
+          v3[i]=n3;
+		  // get the minimal pvalue from this simulation.
+          
+		  overall_pvalues[i]=min;
+		  copy( temppvalue_pathway.begin(), temppvalue_pathway.end(), pvalue_tables.begin()+i*pathway_names_.size());
 
      }
+
+#pragma omp barrier
 
      sort(pvalue_tables.begin(),pvalue_tables.end());
      sort(v1.begin(),v1.end());
@@ -512,7 +533,8 @@ int pathway_db::study(){
 		  // binary search to find P2
 		  down=upper_bound(overall_pvalues.begin(), overall_pvalues.end(), catepvalue_pathway[j]);
 		  // correct pvalue by simulation pvalue. 
-		  pvalue_pathway[j].pvalue=(down-overall_pvalues.begin())/(double) overall_pvalues.size();
+		  pvalue_pathway[j].pvalue=( down-overall_pvalues.begin())/(double) overall_pvalues.size();
+
      }
 
      for (i=0;i<pvalue_pathway.size();i++){
@@ -529,7 +551,7 @@ int pathway_db::study(){
                   __FILE__, __LINE__);
           exit(0);
 	 }
-     int n1=0,n2=0,n3=0;
+     n1=0,n2=0,n3=0;
      for (i=0;i<pvalue_pathway.size();i++){
 		  if (num_gene_pathway[pvalue_pathway[i].id]>1) {
 			   double expected_genes_on_pathway=0;
@@ -551,6 +573,7 @@ int pathway_db::study(){
 			   expected_hits_per_study/=simulate_permutation_number;
                if (pvalue_pathway[i].catepvalue<2) 
                     fprintf(out, "%s\t%d\t%d\t%lf\t%lf\t%lf\t%lf\t\n",pvalue_pathway[i].name.c_str(), total_num_gene_pathway[pvalue_pathway[i].id], num_gene_pathway[pvalue_pathway[i].id], expected_genes_on_pathway, pvalue_pathway[i].catepvalue, expected_hits_per_study, pvalue_pathway[i].pvalue);
+               else printf("%lf\n",pvalue_pathway[i].catepvalue);
 		  }
      }
      vector<int>::iterator pos;
@@ -784,7 +807,7 @@ int pathway_db::remove_correlated_pathway( vector<double> &catepvalue){
      }
      sort(pvalues_idx.begin(),pvalues_idx.end(),sort_pair_by_first);
      for (i=0;i<(int)pvalues_idx.size();i++){
-          if (pvalues_idx[i].first>=0.99999) break;
+          if (pvalues_idx[i].first>=1) break;
           if (catepvalue[i]==1) continue;
           for (j=i+1;j<(int)pvalues_idx.size();j++){
                if (catepvalue[j]==1) continue;
