@@ -477,6 +477,7 @@ int pathway_db::study(){
 		  }
 		  double min=100;;
 		  int n1=0, n2=0, n3=0;
+          remove_correlated_pathway(temppvalue_pathway);
 		  for (j=0;j<temppvalue_pathway.size();j++){
 			   // ignore the pathway has one or zero significant pvalue.
 			   if (sim_num_gene_pathway[j]<2) temppvalue_pathway[j]=1;
@@ -494,7 +495,6 @@ int pathway_db::study(){
 			   }
 		  }
 		  v1.push_back(n1);v2.push_back(n2);v3.push_back(n3);
-          remove_correlated_pathway(temppvalue_pathway);
 		  // get the minimal pvalue from this simulation. 
 		  overall_pvalues.push_back(min);
 		  pvalue_tables.insert(pvalue_tables.end(), temppvalue_pathway.begin(), temppvalue_pathway.end());
