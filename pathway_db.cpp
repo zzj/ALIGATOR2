@@ -287,6 +287,11 @@ pathway_db::pathway_db(int argc, char * argv[]){
         }
           
     }
+    for (int i=0;i<pathway2genes_.size();i++){
+        sort(pathway2genes_[i].begin(),pathway2genes_[i].end());
+    }
+    
+    
     fclose(fdp);
 
 
@@ -432,12 +437,9 @@ int pathway_db::study(){
     // use the sim_matrix to get category specific pvalue. 
     permutation_study(&sim_matrix, N, &num_gene_pathway, &catepvalue_pathway);
     calc_correlation_pathway();
-
     for (i=0;i<catepvalue_pathway.size();i++){
         if (num_gene_pathway[i]<2) catepvalue_pathway[i]=1;
     }
-    remove_correlated_pathway( catepvalue_pathway);
-     
     // randomly select one replicate gene list as "observe data"
     // randomly sample (with replacement)
     printf("Starting correcting errors ...\n");
@@ -567,7 +569,6 @@ int pathway_db::study(){
             expected_hits_per_study/=simulate_permutation_number;
             if (pvalue_pathway[i].catepvalue<2) 
                 fprintf(out, "%s\t%d\t%d\t%lf\t%lf\t%lf\t%lf\t\n",pvalue_pathway[i].name.c_str(), total_num_gene_pathway[pvalue_pathway[i].id], num_gene_pathway[pvalue_pathway[i].id], expected_genes_on_pathway, pvalue_pathway[i].catepvalue, expected_hits_per_study, pvalue_pathway[i].pvalue);
-            else printf("%lf\n",pvalue_pathway[i].catepvalue);
         }
     }
     vector<int>::iterator pos;
@@ -812,12 +813,12 @@ int pathway_db::remove_correlated_pathway( vector<double> &catepvalue){
     }
     sort(pvalues_idx.begin(),pvalues_idx.end(),sort_pair_by_first);
     for (i=0;i<(int)pvalues_idx.size();i++){
-        if (pvalues_idx[i].first>=1) break;
-        if (catepvalue[i]==1) continue;
+        int iid=pvalues_idx[i].second;
+        if (pvalues_idx[i].first>=1) continue;
+        if (catepvalue[iid]==1) continue;
         for (j=i+1;j<(int)pvalues_idx.size();j++){
-            if (catepvalue[j]==1) continue;
-            int iid=pvalues_idx[i].second;
             int jid=pvalues_idx[j].second;
+            if (catepvalue[jid]==1) continue;
             if (pathway_correlation_[iid][jid]>max_correlation_){
                 catepvalue[jid]=10;
             }
