@@ -437,6 +437,7 @@ int pathway_db::study(){
     // use the sim_matrix to get category specific pvalue. 
     permutation_study(&sim_matrix, N, &num_gene_pathway, &catepvalue_pathway);
     calc_correlation_pathway();
+    remove_correlated_pathway( catepvalue_pathway);
     for (i=0;i<catepvalue_pathway.size();i++){
         if (num_gene_pathway[i]<2) catepvalue_pathway[i]=1;
     }
@@ -461,24 +462,25 @@ int pathway_db::study(){
     vector<double> temppvalue_pathway;
     double min;
     vector<int> rsamples;
-    rsamples.resize(simulate_permutation_number*permutation_number*2+simulate_permutation_number);
-    // prepare random sample first, because random generator is not thread safe. 
-    for (i=0;i<rsamples.size();i++){
-        rsamples[i]=generate_sample_id();
-    }
 
-#pragma omp parallel for default (shared) private(i,sample_id,temppvalue_pathway,k,j,min,n1,n2,n3,sim_num_gene_pathway)
+#pragma omp parallel for default (shared) private(i,sample_id,temppvalue_pathway,k,j,min,n1,n2,n3,sim_num_gene_pathway,rng)
     for (i=0;i<(int)simulate_permutation_number;i++){
-        int passes=0;
+        boost::mt19937 rng;                 // produces randomness out of thin air
+        // set random seed
+        rng.seed((boost::mt19937::result_type)(seed_+13475983*i));
+        boost::uniform_int<> sample_rand(0,permutation_number-1);      // distribution that maps to 0..permutation_number-1
+
+        boost::variate_generator<boost::mt19937&, boost::uniform_int<> >
+            generate_sample_id(rng, sample_rand);             
+        
         // randomly select a gene list
-        sample_id=rsamples[i];
+        sample_id=generate_sample_id();
         temppvalue_pathway.clear();		  temppvalue_pathway.resize(pathway_names_.size());
         sim_num_gene_pathway=sim_matrix.at(sample_id);
 
         // use the other gene list to get significant gene value. 
         for (j=0;j<permutation_number;j++){
-            int p=rsamples[simulate_permutation_number+simulate_permutation_number*i*2+passes];
-            passes++;
+            int p=generate_sample_id();
             if (p==sample_id){j--; continue;}
             int t;
             for (t=0;t<sim_num_gene_pathway.size();t++){
