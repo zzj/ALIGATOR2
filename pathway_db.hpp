@@ -61,14 +61,14 @@ public:
     pathway_db(int argc, char *argv[]);
     int study();
 
-    int permutation_prepare(int permutation_number, int N, vector<vector<int> > *sim_num_gene_pathway);
-    int permutation_study(vector<vector<int> > *sim_matrix,int N,vector<int> * num_gene_pathway, vector<double> *catepvalue_pathway);
+    int permutation_prepare(int permutation_number, int N, vector<vector<unsigned short> > *sim_num_gene_pathway);
+    int permutation_study(vector<vector<unsigned short> > *sim_matrix,int N,vector<unsigned short> * num_gene_pathway, vector<double> *catepvalue_pathway);
     int calc_correlation_pathway();
     int remove_correlated_pathway( vector<double> &catepavlue);
-    int count_significant_pathway(vector<int> *sgenes, vector<int> *spathways);
-    int count_significant_pathway_by_snp(vector<int> *ssnps, vector<int> *spathways);
+    int count_significant_pathway(vector<unsigned short> *sgenes, vector<unsigned short> *spathways);
+    int count_significant_pathway_by_snp(vector<int> *ssnps, vector<unsigned short> *spathways);
     int count_significant_genes_by_ld(vector<int> *genelist);
-    int foreach_count_significant_genes_by_ld(vector<int> *genenum, vector<vector<int> > *genelists);
+    int foreach_count_significant_genes_by_ld(vector<unsigned short> *genenum, vector<vector<int> > *genelists);
 };
 
 #endif /* _PATHWAY_DB_H_ */

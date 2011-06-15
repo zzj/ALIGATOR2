@@ -351,7 +351,7 @@ int pathway_db::study(){
     vector<int> significant_gene_table, significant_gene;
     vector<int> significant_snp;
     int N;
-    vector<int> num_gene_pathway;
+    vector<unsigned short> num_gene_pathway;
     vector<vector<int> > gene_list_pathway;
     boost::mt19937 rng;                 // produces randomness out of thin air
     // set random seed
@@ -398,7 +398,7 @@ int pathway_db::study(){
     }
     // Count number of significant genes in each pathway
 
-    vector<int> sim_num_gene_pathway;
+    vector<unsigned short> sim_num_gene_pathway;
     vector<double> catepvalue_pathway;
     vector<my_pathway_data > pvalue_pathway;
      
@@ -427,7 +427,7 @@ int pathway_db::study(){
     boost::variate_generator<boost::mt19937&, boost::uniform_int<> >
         generate_sample_id(rng, sample_rand);             
      
-    vector<vector<int> > sim_matrix;
+    vector<vector<unsigned short> > sim_matrix;
     printf("prepare permutation ...\n");
 
     //prepare random_gene_list, and get the sim_matrix for future use.
@@ -595,35 +595,31 @@ int pathway_db::study(){
 /*
   N is the number of significant genes
 */
-int pathway_db::permutation_prepare(int permutation_number, int N, vector<vector<int> > *sim_matrix){
+int pathway_db::permutation_prepare(int permutation_number, int N, vector<vector<unsigned short> > *sim_matrix){
 
-    boost::mt19937 rng;                 // produces randomness out of thin air
-    // see pseudo-random number generators
-    boost::uniform_int<> six(0,snp_ids_.size()-1);      
-    rng.seed((boost::mt19937::result_type)(seed_+1564245));
-    boost::variate_generator<boost::mt19937&, boost::uniform_int<> >
-        generate_snp_id(rng, six);             
     sim_matrix->resize(permutation_number);
     int i,j;
-    vector<int> random_numbers;
-    random_numbers.resize(permutation_number*N*2);
     // randomly select SNPs
     // add corresponding gene(s) to gene list.
     // stop when list contains N genes.
     // count number of simulated significant genes in each category.
     // save the result input sim_matrix for reuse in the furture
-    for ( i=0;i<random_numbers.size();i++){
-        random_numbers[i]=generate_snp_id();
-    }
      
     vector<int> sim_gene;
     vector<int> sim_gene_id;
     vector<int> sim_snp_id;
     vector<int> is_used_snp;
-    vector<int> spathways;
+    vector<unsigned short> spathways;
     vector<vector<int> > gene_list_spathways;
-#pragma omp parallel for default (shared) private(i,j,sim_gene_id,sim_gene,sim_snp_id,is_used_snp,spathways,gene_list_spathways)    
+    set<int> checklist;
+#pragma omp parallel for default (shared) private(i,j,sim_gene_id,sim_gene,sim_snp_id,is_used_snp,spathways,gene_list_spathways,checklist)    
     for (i=0;i<permutation_number;i++){
+        boost::mt19937 rng;                 // produces randomness out of thin air
+        // see pseudo-random number generators
+        boost::uniform_int<> six(0,snp_ids_.size()-1);      
+        rng.seed((boost::mt19937::result_type)(seed_+1564245*i));
+        boost::variate_generator<boost::mt19937&, boost::uniform_int<> >
+            generate_snp_id(rng, six);             
         int  passes=0;
         int n=0;
         int k;
@@ -637,12 +633,12 @@ int pathway_db::permutation_prepare(int permutation_number, int N, vector<vector
         sim_gene.resize(gene_name2id_.size());
         sim_snp_id.clear(); sim_gene_id.clear();
         while(true){
-            int id=random_numbers[i*2*N+passes];
+            checklist.clear();
+            int id=generate_snp_id();
             passes++;
             if (id>=snp2genes_.size())  fprintf(stderr, "ERROR: error at %s:%d\n",
                                                 __FILE__, __LINE__);
             sim_gene_id.clear();
-            set<int> checklist;
             for (j=0;j<snp2genes_[id].size();j++){
                 if (sim_gene[snp2genes_[id][j]]==0){
                     sim_gene[snp2genes_[id][j]]=1;
@@ -681,7 +677,7 @@ int pathway_db::permutation_prepare(int permutation_number, int N, vector<vector
 
 
 /* sim_matrix[i][j] stores the number of significant genes in jth pathway in ith permutation */
-int pathway_db::permutation_study(vector<vector< int> > *sim_matrix,int N,vector<int> * num_gene_pathway, vector<double> *catepvalue_pathway){
+int pathway_db::permutation_study(vector<vector< unsigned short> > *sim_matrix,int N,vector<unsigned short> * num_gene_pathway, vector<double> *catepvalue_pathway){
 
 
     int i,j;
@@ -697,7 +693,7 @@ int pathway_db::permutation_study(vector<vector< int> > *sim_matrix,int N,vector
     }
     return 0;
 }
-int pathway_db::count_significant_pathway(vector<int> *sgenes, vector<int> *spathways){
+int pathway_db::count_significant_pathway(vector<unsigned short> *sgenes, vector<unsigned short> *spathways){
     int i,j;
     spathways->clear();
     spathways->resize(pathway_names_.size());
@@ -709,7 +705,7 @@ int pathway_db::count_significant_pathway(vector<int> *sgenes, vector<int> *spat
     return 0;
 }
 
-int pathway_db::count_significant_pathway_by_snp(vector<int> *ssnps, vector<int> *spathways){
+int pathway_db::count_significant_pathway_by_snp(vector<int> *ssnps, vector<unsigned short> *spathways){
     int i,j;
     spathways->clear();
     spathways->resize(pathway_names_.size());
@@ -756,7 +752,7 @@ int pathway_db::count_significant_genes_by_ld(vector<int> *sgene){
     return ret;
 }
 
-int pathway_db::foreach_count_significant_genes_by_ld(vector<int> * num_gene_pathway, vector<vector<int> > *gene_list_pathway){
+int pathway_db::foreach_count_significant_genes_by_ld(vector<unsigned short> * num_gene_pathway, vector<vector<int> > *gene_list_pathway){
 
 
     if (num_gene_pathway->size()!=gene_list_pathway->size()){
